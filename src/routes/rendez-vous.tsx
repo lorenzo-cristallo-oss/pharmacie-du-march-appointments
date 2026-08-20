@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, CheckCircle2, Clock, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CONSULTATIONS, PHARMACY, VACCINES, slotsForDate } from "@/lib/pharmacy-data";
 import { cn } from "@/lib/utils";
+import { createReservation, getUnavailableSlots } from "@/lib/booking-api";
 
 const searchSchema = z.object({
   type: z.enum(["vaccin", "prestation"]).optional(),
@@ -50,22 +51,76 @@ function BookingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [unavailable, setUnavailable] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState<null | { service: string; date: string; time: string }>(
     null,
   );
 
   const options = kind === "vaccin" ? VACCINES : CONSULTATIONS;
-  const slots = useMemo(() => slotsForDate(date), [date]);
-  const closed = Boolean(date) && slots.length === 0;
+  const slots = useMemo(
+    () => slotsForDate(date).filter((slot) => !unavailable.includes(slot)),
+    [date, unavailable],
+  );
+  const baseSlots = useMemo(() => slotsForDate(date), [date]);
+  const closed = Boolean(date) && baseSlots.length === 0;
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    if (!date) {
+      setUnavailable([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingSlots(true);
+    getUnavailableSlots(kind, date)
+      .then((items) => {
+        if (!cancelled) setUnavailable(items ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Impossible de charger les disponibilités.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSlots(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, date]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!service || !date || !time || !firstName || !lastName || !phone) {
       toast.error("Merci de compléter tous les champs obligatoires.");
       return;
     }
-    setConfirmed({ service, date, time });
-    toast.success("Demande de rendez-vous envoyée !");
+    setSubmitting(true);
+    try {
+      await createReservation({
+        type: kind,
+        service,
+        date,
+        time,
+        firstName,
+        lastName,
+        phone,
+        email,
+        notes,
+      });
+      setConfirmed({ service, date, time });
+      toast.success("Demande de rendez-vous enregistrée !");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erreur inconnue";
+      if (message.toLowerCase().includes("créneau")) {
+        toast.error("Ce créneau n’est plus disponible. Choisissez une autre heure.");
+        getUnavailableSlots(kind, date).then(setUnavailable).catch(() => undefined);
+        setTime("");
+      } else {
+        toast.error("Impossible d’enregistrer la réservation. Réessayez.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (confirmed) {
@@ -208,7 +263,11 @@ function BookingPage() {
                   La pharmacie est fermée ce jour-là. Merci de choisir une autre date.
                 </p>
               )}
-              {slots.length > 0 && (
+              {loadingSlots && <p className="mt-3 text-sm text-muted-foreground">Chargement des créneaux…</p>}
+              {!loadingSlots && !closed && baseSlots.length > 0 && slots.length === 0 && (
+                <p className="mt-3 text-sm text-destructive">Aucun créneau n’est disponible ce jour-là.</p>
+              )}
+              {!loadingSlots && slots.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {slots.map((s) => (
                     <button
@@ -288,9 +347,10 @@ function BookingPage() {
             </dl>
             <button
               type="submit"
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              disabled={submitting || loadingSlots}
+              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <CalendarCheck className="size-4" /> Confirmer la demande
+              <CalendarCheck className="size-4" /> {submitting ? "Enregistrement…" : "Confirmer la demande"}
             </button>
             <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
               <Clock className="mt-0.5 size-3.5 shrink-0" /> Votre demande est confirmée par
