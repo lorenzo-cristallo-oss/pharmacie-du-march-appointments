@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InfosRouteImport } from './routes/infos'
+import { Route as PrestationsRouteImport } from './routes/prestations'
+import { Route as VaccinsRouteImport } from './routes/vaccins'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InfosRoute = InfosRouteImport.update({
+  id: '/infos',
+  path: '/infos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrestationsRoute = PrestationsRouteImport.update({
+  id: '/prestations',
+  path: '/prestations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VaccinsRoute = VaccinsRouteImport.update({
+  id: '/vaccins',
+  path: '/vaccins',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/infos': typeof InfosRoute
+  '/prestations': typeof PrestationsRoute
+  '/vaccins': typeof VaccinsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/infos': typeof InfosRoute
+  '/prestations': typeof PrestationsRoute
+  '/vaccins': typeof VaccinsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/infos': typeof InfosRoute
+  '/prestations': typeof PrestationsRoute
+  '/vaccins': typeof VaccinsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/infos' | '/prestations' | '/vaccins'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/infos' | '/prestations' | '/vaccins'
+  id: '__root__' | '/' | '/infos' | '/prestations' | '/vaccins'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  InfosRoute: typeof InfosRoute
+  PrestationsRoute: typeof PrestationsRoute
+  VaccinsRoute: typeof VaccinsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +78,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/infos': {
+      id: '/infos'
+      path: '/infos'
+      fullPath: '/infos'
+      preLoaderRoute: typeof InfosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prestations': {
+      id: '/prestations'
+      path: '/prestations'
+      fullPath: '/prestations'
+      preLoaderRoute: typeof PrestationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vaccins': {
+      id: '/vaccins'
+      path: '/vaccins'
+      fullPath: '/vaccins'
+      preLoaderRoute: typeof VaccinsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  InfosRoute: InfosRoute,
+  PrestationsRoute: PrestationsRoute,
+  VaccinsRoute: VaccinsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
