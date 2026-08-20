@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, CheckCircle2, Clock, Phone } from "lucide-react";
+import {
+  CalendarCheck,
+  CheckCircle2,
+  Clock,
+  Phone,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -24,6 +29,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/rendez-vous")({
   validateSearch: searchSchema,
+
   head: () => ({
     meta: [
       {
@@ -37,7 +43,8 @@ export const Route = createFileRoute("/rendez-vous")({
       },
       {
         property: "og:title",
-        content: "Prendre rendez-vous — Pharmacie Du Marché Carouge",
+        content:
+          "Prendre rendez-vous — Pharmacie Du Marché Carouge",
       },
       {
         property: "og:description",
@@ -46,6 +53,7 @@ export const Route = createFileRoute("/rendez-vous")({
       },
     ],
   }),
+
   component: BookingPage,
 });
 
@@ -58,7 +66,10 @@ function todayStr() {
 function BookingPage() {
   const search = Route.useSearch();
 
-  const [kind, setKind] = useState<Kind>(search.type ?? "vaccin");
+  const [kind, setKind] = useState<Kind>(
+    search.type ?? "vaccin",
+  );
+
   const [service, setService] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -79,7 +90,8 @@ function BookingPage() {
     time: string;
   }>(null);
 
-  const options = kind === "vaccin" ? VACCINES : CONSULTATIONS;
+  const options =
+    kind === "vaccin" ? VACCINES : CONSULTATIONS;
 
   const baseSlots = useMemo(() => {
     const allSlots = slotsForDate(date);
@@ -91,35 +103,49 @@ function BookingPage() {
     const selectedDate = new Date(`${date}T12:00:00`);
     const day = selectedDate.getDay();
 
-    // 1 = lundi, 5 = vendredi
     const isWeekday = day >= 1 && day <= 5;
 
     if (!isWeekday) {
       return allSlots;
     }
 
-    // Pause pharmacie :
-    // lundi à vendredi, de 12h15 à 13h45.
     return allSlots.filter((slot) => {
-      const [hours, minutes] = slot.split(":").map(Number);
+      const [hours, minutes] = slot
+        .split(":")
+        .map(Number);
 
-      const slotMinutes = hours * 60 + minutes;
+      const slotMinutes =
+        hours * 60 + minutes;
 
-      const pauseStart = 12 * 60 + 15;
-      const pauseEnd = 13 * 60 + 45;
+      const pauseStart =
+        12 * 60 + 15;
 
-      return slotMinutes < pauseStart || slotMinutes >= pauseEnd;
+      const pauseEnd =
+        13 * 60 + 45;
+
+      return (
+        slotMinutes < pauseStart ||
+        slotMinutes >= pauseEnd
+      );
     });
   }, [date]);
 
   const slots = useMemo(
-    () => baseSlots.filter((slot) => !unavailable.includes(slot)),
+    () =>
+      baseSlots.filter(
+        (slot) => !unavailable.includes(slot),
+      ),
     [baseSlots, unavailable],
   );
 
-  const originalSlots = useMemo(() => slotsForDate(date), [date]);
+  const originalSlots = useMemo(
+    () => slotsForDate(date),
+    [date],
+  );
 
-  const closed = Boolean(date) && originalSlots.length === 0;
+  const closed =
+    Boolean(date) &&
+    originalSlots.length === 0;
 
   useEffect(() => {
     if (!date) {
@@ -139,7 +165,9 @@ function BookingPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("Impossible de charger les disponibilités.");
+          toast.error(
+            "Impossible de charger les disponibilités.",
+          );
         }
       })
       .finally(() => {
@@ -153,7 +181,9 @@ function BookingPage() {
     };
   }, [kind, date]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(
+    e: React.FormEvent,
+  ) {
     e.preventDefault();
 
     if (
@@ -164,7 +194,10 @@ function BookingPage() {
       !lastName ||
       !phone
     ) {
-      toast.error("Merci de compléter tous les champs obligatoires.");
+      toast.error(
+        "Merci de compléter tous les champs obligatoires.",
+      );
+
       return;
     }
 
@@ -189,12 +222,20 @@ function BookingPage() {
         time,
       });
 
-      toast.success("Demande de rendez-vous enregistrée !");
+      toast.success(
+        "Votre rendez-vous est confirmé !",
+      );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Erreur inconnue";
+        error instanceof Error
+          ? error.message
+          : "Erreur inconnue";
 
-      if (message.toLowerCase().includes("créneau")) {
+      if (
+        message
+          .toLowerCase()
+          .includes("créneau")
+      ) {
         toast.error(
           "Ce créneau n’est plus disponible. Choisissez une autre heure.",
         );
@@ -206,7 +247,7 @@ function BookingPage() {
         setTime("");
       } else {
         toast.error(
-          "Impossible d’enregistrer la réservation. Réessayez.",
+          "Impossible d’enregistrer le rendez-vous. Réessayez.",
         );
       }
     } finally {
@@ -226,39 +267,63 @@ function BookingPage() {
             </span>
 
             <h1 className="mt-5 font-serif text-3xl font-semibold text-foreground">
-              Demande enregistrée
+              Votre rendez-vous est confirmé
             </h1>
 
             <p className="mt-3 text-sm text-muted-foreground">
-              Merci {firstName}, nous vous confirmons votre créneau par
-              téléphone dans les meilleurs délais.
+              Merci {firstName}, votre créneau est
+              bien réservé.
+            </p>
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              La pharmacie vous contactera par
+              téléphone uniquement si une
+              modification du rendez-vous est
+              nécessaire.
             </p>
 
             <dl className="mt-8 space-y-3 rounded-xl border border-border bg-background p-5 text-left text-sm">
-              <Row label="Prestation" value={confirmed.service} />
+              <Row
+                label="Prestation"
+                value={confirmed.service}
+              />
 
               <Row
                 label="Date"
                 value={new Date(
                   `${confirmed.date}T12:00:00`,
-                ).toLocaleDateString("fr-CH", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                ).toLocaleDateString(
+                  "fr-CH",
+                  {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  },
+                )}
               />
 
-              <Row label="Heure" value={confirmed.time} />
+              <Row
+                label="Heure"
+                value={confirmed.time}
+              />
 
               <Row
                 label="Patient"
                 value={`${firstName} ${lastName}`}
               />
 
-              <Row label="Téléphone" value={phone} />
+              <Row
+                label="Téléphone"
+                value={phone}
+              />
 
-              {email && <Row label="E-mail" value={email} />}
+              {email && (
+                <Row
+                  label="E-mail"
+                  value={email}
+                />
+              )}
             </dl>
 
             <p className="mt-6 text-xs text-muted-foreground">
@@ -288,8 +353,9 @@ function BookingPage() {
         </h1>
 
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Prenez rendez-vous en ligne avec la {PHARMACY.name} Carouge
-          pour vos prestations de santé en pharmacie et vos
+          Prenez rendez-vous en ligne avec la{" "}
+          {PHARMACY.name} Carouge pour vos
+          prestations de santé en pharmacie et vos
           vaccinations.
         </p>
 
@@ -312,7 +378,8 @@ function BookingPage() {
                     },
                     {
                       k: "prestation",
-                      label: "Prestation santé",
+                      label:
+                        "Prestation santé",
                     },
                   ] as const
                 ).map((o) => (
@@ -360,7 +427,9 @@ function BookingPage() {
                       name="service"
                       value={o}
                       checked={service === o}
-                      onChange={() => setService(o)}
+                      onChange={() =>
+                        setService(o)
+                      }
                       className="mt-1 accent-[var(--primary)]"
                     />
 
@@ -382,7 +451,9 @@ function BookingPage() {
                     min={todayStr()}
                     value={date}
                     onChange={(e) => {
-                      setDate(e.target.value);
+                      setDate(
+                        e.target.value,
+                      );
                       setTime("");
                     }}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -392,8 +463,9 @@ function BookingPage() {
 
               {closed && (
                 <p className="mt-3 text-sm text-destructive">
-                  La pharmacie est fermée ce jour-là. Merci de choisir
-                  une autre date.
+                  La pharmacie est fermée ce
+                  jour-là. Merci de choisir une
+                  autre date.
                 </p>
               )}
 
@@ -408,29 +480,33 @@ function BookingPage() {
                 baseSlots.length > 0 &&
                 slots.length === 0 && (
                   <p className="mt-3 text-sm text-destructive">
-                    Aucun créneau n’est disponible ce jour-là.
+                    Aucun créneau n’est
+                    disponible ce jour-là.
                   </p>
                 )}
 
-              {!loadingSlots && slots.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {slots.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setTime(s)}
-                      className={cn(
-                        "rounded-md border px-3 py-1.5 text-sm tabular-nums transition-colors",
-                        time === s
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border text-foreground hover:bg-secondary",
-                      )}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {!loadingSlots &&
+                slots.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {slots.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() =>
+                          setTime(s)
+                        }
+                        className={cn(
+                          "rounded-md border px-3 py-1.5 text-sm tabular-nums transition-colors",
+                          time === s
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border text-foreground hover:bg-secondary",
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </fieldset>
 
             <fieldset>
@@ -443,7 +519,9 @@ function BookingPage() {
                   <input
                     value={firstName}
                     onChange={(e) =>
-                      setFirstName(e.target.value)
+                      setFirstName(
+                        e.target.value,
+                      )
                     }
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
@@ -452,7 +530,11 @@ function BookingPage() {
                 <Field label="Nom *">
                   <input
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) =>
+                      setLastName(
+                        e.target.value,
+                      )
+                    }
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </Field>
@@ -461,7 +543,11 @@ function BookingPage() {
                   <input
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) =>
+                      setPhone(
+                        e.target.value,
+                      )
+                    }
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </Field>
@@ -470,7 +556,11 @@ function BookingPage() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) =>
+                      setEmail(
+                        e.target.value,
+                      )
+                    }
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   />
                 </Field>
@@ -480,7 +570,9 @@ function BookingPage() {
                     <textarea
                       value={notes}
                       onChange={(e) =>
-                        setNotes(e.target.value)
+                        setNotes(
+                          e.target.value,
+                        )
                       }
                       rows={3}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -508,37 +600,50 @@ function BookingPage() {
 
               <Row
                 label="Prestation"
-                value={service || "—"}
+                value={
+                  service || "—"
+                }
               />
 
-              <Row label="Date" value={date || "—"} />
+              <Row
+                label="Date"
+                value={date || "—"}
+              />
 
-              <Row label="Heure" value={time || "—"} />
+              <Row
+                label="Heure"
+                value={time || "—"}
+              />
             </dl>
 
             <button
               type="submit"
-              disabled={submitting || loadingSlots}
+              disabled={
+                submitting ||
+                loadingSlots
+              }
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <CalendarCheck className="size-4" />
 
               {submitting
                 ? "Enregistrement…"
-                : "Confirmer la demande"}
+                : "Confirmer le rendez-vous"}
             </button>
 
             <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
               <Clock className="mt-0.5 size-3.5 shrink-0" />
-              Votre demande est confirmée par l’équipe avant le
-              rendez-vous.
+              Le créneau est réservé dès la
+              confirmation.
             </p>
 
             <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
               <Phone className="mt-0.5 size-3.5 shrink-0" />
 
               <a
-                href={PHARMACY.phoneHref}
+                href={
+                  PHARMACY.phoneHref
+                }
                 className="hover:text-primary"
               >
                 {PHARMACY.phone}
@@ -580,7 +685,9 @@ function Row({
 }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
+      <dt className="text-muted-foreground">
+        {label}
+      </dt>
 
       <dd className="max-w-[60%] text-right font-medium text-foreground">
         {value}
