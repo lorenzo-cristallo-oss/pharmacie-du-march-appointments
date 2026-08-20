@@ -65,6 +65,8 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border/70 px-5 py-5 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} {PHARMACY.name} — Carouge, Genève
+        <span className="mx-2">·</span>
+        <Link to="/admin" className="opacity-40 transition-opacity hover:opacity-100">Administration</Link>
       </div>
     </footer>
   );
