@@ -105,7 +105,10 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
 
   async function addBlock(e: React.FormEvent) {
     e.preventDefault();
-    if (!blockDate) return toast.error("Choisissez une date.");
+    if (!blockDate) {
+      toast.error("Choisissez une date.");
+      return;
+    }
     try {
       await adminAddBlock(password, { type: blockType, date: blockDate, startTime: wholeDay ? null : startTime, endTime: wholeDay ? null : endTime, reason });
       toast.success("Indisponibilité ajoutée."); setReason(""); await load();
