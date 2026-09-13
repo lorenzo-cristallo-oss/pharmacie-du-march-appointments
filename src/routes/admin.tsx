@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Check, LogOut, RefreshCw, Trash2, X } from "lucide-react";
+import { Ban, Check, LogOut, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { CONSULTATIONS, VACCINES, slotsForDate } from "@/lib/pharmacy-data";
 import {
   adminAddBlock,
+  adminCreateReservation,
+  getUnavailableSlots,
   adminBlocks,
   adminDeleteBlock,
   adminLogin,
