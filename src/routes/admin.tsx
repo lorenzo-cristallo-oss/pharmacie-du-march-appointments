@@ -84,6 +84,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
   const [startTime, setStartTime] = useState("08:30");
   const [endTime, setEndTime] = useState("18:00");
   const [reason, setReason] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
