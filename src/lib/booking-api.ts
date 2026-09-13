@@ -75,6 +75,31 @@ export async function createReservation(input: {
   });
 }
 
+export async function adminCreateReservation(password: string, input: {
+  type: BookingKind;
+  service: string;
+  date: string;
+  time: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  notes: string;
+}) {
+  return rpc<string>("admin_create_reservation", {
+    p_password: password,
+    p_type: input.type,
+    p_service: input.service,
+    p_date: input.date,
+    p_time: input.time,
+    p_first_name: input.firstName,
+    p_last_name: input.lastName,
+    p_phone: input.phone,
+    p_email: input.email || null,
+    p_notes: input.notes || null,
+  });
+}
+
 export async function adminLogin(password: string) {
   return rpc<boolean>("admin_check_password", { p_password: password });
 }

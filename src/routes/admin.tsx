@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Ban, Check, LogOut, RefreshCw, Trash2, X } from "lucide-react";
+import { Ban, Check, LogOut, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { CONSULTATIONS, VACCINES, slotsForDate } from "@/lib/pharmacy-data";
 import {
   adminAddBlock,
+  adminCreateReservation,
+  getUnavailableSlots,
   adminBlocks,
   adminDeleteBlock,
   adminLogin,
@@ -42,7 +45,10 @@ function AdminPage() {
     setChecking(true);
     try {
       const ok = await adminLogin(password);
-      if (!ok) return toast.error("Mot de passe incorrect.");
+      if (!ok) {
+        toast.error("Mot de passe incorrect.");
+        return;
+      }
       sessionStorage.setItem(SESSION_KEY, password);
       setLoggedIn(true);
     } catch {
@@ -78,6 +84,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
   const [startTime, setStartTime] = useState("08:30");
   const [endTime, setEndTime] = useState("18:00");
   const [reason, setReason] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,7 +109,10 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
 
   async function addBlock(e: React.FormEvent) {
     e.preventDefault();
-    if (!blockDate) return toast.error("Choisissez une date.");
+    if (!blockDate) {
+      toast.error("Choisissez une date.");
+      return;
+    }
     try {
       await adminAddBlock(password, { type: blockType, date: blockDate, startTime: wholeDay ? null : startTime, endTime: wholeDay ? null : endTime, reason });
       toast.success("Indisponibilité ajoutée."); setReason(""); await load();
@@ -119,7 +129,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <div><p className="text-xs uppercase tracking-[.16em] text-muted-foreground">Pharmacie Du Marché</p><h1 className="font-serif text-2xl font-semibold">Administration</h1></div>
-          <div className="flex gap-2"><button onClick={() => void load()} className="rounded-md border p-2" title="Actualiser"><RefreshCw className="size-4" /></button><button onClick={onLogout} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"><LogOut className="size-4" /> Déconnexion</button></div>
+          <div className="flex flex-wrap items-center gap-2"><button onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm"><Plus className="size-4" /> Ajouter un rendez-vous</button><button onClick={() => void load()} className="rounded-md border p-2" title="Actualiser"><RefreshCw className="size-4" /></button><button onClick={onLogout} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"><LogOut className="size-4" /> Déconnexion</button></div>
         </div>
       </header>
 
@@ -152,6 +162,128 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
       </main>
 
       {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e)=>{if(e.target===e.currentTarget)setSelected(null)}}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-2xl bg-card p-6 shadow-xl"><div className="flex justify-between"><div><p className="text-xs uppercase tracking-wider text-muted-foreground">Détails de la réservation</p><h2 className="mt-1 font-serif text-2xl font-semibold">{selected.first_name} {selected.last_name}</h2></div><button onClick={()=>setSelected(null)}><X /></button></div><dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2"><Info label="Date" value={`${formatDate(selected.appointment_date)} à ${selected.start_time.slice(0,5)}`} /><Info label="Type" value={selected.type === "vaccin" ? "Vaccination" : "Prestation santé"} /><Info label="Prestation" value={selected.service} /><Info label="Téléphone" value={selected.phone} /><Info label="E-mail" value={selected.email || "—"} /><Info label="Statut" value={selected.status === "pending" ? "En attente" : selected.status === "accepted" ? "Acceptée" : "Refusée"} />{selected.notes && <div className="sm:col-span-2"><Info label="Remarque" value={selected.notes} /></div>}</dl><div className="mt-7 grid gap-2 sm:grid-cols-2"><button onClick={()=>void changeStatus(selected.id,"accepted")} className="flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground"><Check className="size-4" /> Accepter</button><button onClick={()=>void changeStatus(selected.id,"refused")} className="flex items-center justify-center gap-2 rounded-md bg-destructive px-4 py-3 font-semibold text-destructive-foreground"><X className="size-4" /> Refuser</button></div><a href={`tel:${selected.phone.replace(/\s/g,"")}`} className="mt-3 flex items-center justify-center rounded-md border px-4 py-3 text-sm font-semibold">Téléphoner au patient</a></div></div>}
+      {creating && <NewAppointmentDialog password={password} onClose={() => setCreating(false)} onCreated={() => { setCreating(false); void load(); }} />}
+    </div>
+  );
+}
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+/** Créneaux du jour, hors pause de midi en semaine (identique au formulaire public). */
+function adminSlotsForDate(date: string) {
+  const all = slotsForDate(date);
+  if (!date) return all;
+  const day = new Date(`${date}T12:00:00`).getDay();
+  if (day < 1 || day > 5) return all;
+  return all.filter((slot) => {
+    const [h = 0, m = 0] = slot.split(":").map(Number);
+    const mins = h * 60 + m;
+    return mins < 12 * 60 + 15 || mins >= 13 * 60 + 45;
+  });
+}
+
+function NewAppointmentDialog({ password, onClose, onCreated }: { password: string; onClose: () => void; onCreated: () => void }) {
+  const [type, setType] = useState<"vaccin" | "prestation">("vaccin");
+  const [service, setService] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [unavailable, setUnavailable] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const options = type === "vaccin" ? VACCINES : CONSULTATIONS;
+  const baseSlots = useMemo(() => adminSlotsForDate(date), [date]);
+  const slots = useMemo(() => baseSlots.filter((s) => !unavailable.includes(s)), [baseSlots, unavailable]);
+
+  const refreshSlots = useCallback(async (d: string) => {
+    if (!d) { setUnavailable([]); return; }
+    setLoadingSlots(true);
+    try {
+      // Une seule salle : on cumule les indisponibilités des deux types.
+      const [a, b] = await Promise.all([getUnavailableSlots("vaccin", d), getUnavailableSlots("prestation", d)]);
+      setUnavailable([...new Set([...(a ?? []), ...(b ?? [])])]);
+    } catch { toast.error("Impossible de charger les disponibilités."); }
+    finally { setLoadingSlots(false); }
+  }, []);
+
+  useEffect(() => { void refreshSlots(date); }, [date, refreshSlots]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!service || !date || !time || !firstName || !lastName || !phone) {
+      toast.error("Merci de compléter tous les champs obligatoires.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await adminCreateReservation(password, { type, service, date, time, firstName, lastName, phone, email, notes });
+      toast.success("Rendez-vous ajouté et confirmé.");
+      onCreated();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.toLowerCase().includes("créneau")) {
+        toast.error("Ce créneau vient d’être pris. Choisissez une autre heure.");
+        setTime("");
+        void refreshSlots(date);
+      } else if (message.toLowerCase().includes("mot de passe")) {
+        toast.error("Session expirée, reconnectez-vous.");
+      } else {
+        toast.error("Impossible d’ajouter ce rendez-vous.");
+      }
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <form onSubmit={submit} className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-2xl bg-card p-6 shadow-xl">
+        <div className="flex items-start justify-between">
+          <div><p className="text-xs uppercase tracking-wider text-muted-foreground">Rendez-vous par téléphone ou sur place</p><h2 className="mt-1 font-serif text-2xl font-semibold">Ajouter un rendez-vous</h2></div>
+          <button type="button" onClick={onClose}><X /></button>
+        </div>
+
+        <label className="mt-6 block text-sm font-medium">Type</label>
+        <div className="mt-2 flex gap-2">
+          {([{ k: "vaccin", label: "Vaccination" }, { k: "prestation", label: "Prestation santé" }] as const).map((o) => (
+            <button key={o.k} type="button" onClick={() => { setType(o.k); setService(""); }} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold ${type === o.k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-secondary"}`}>{o.label}</button>
+          ))}
+        </div>
+
+        <label className="mt-4 block text-sm font-medium">{type === "vaccin" ? "Vaccin" : "Prestation"}</label>
+        <select value={service} onChange={(e) => setService(e.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm">
+          <option value="">— Choisir —</option>
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+
+        <label className="mt-4 block text-sm font-medium">Date</label>
+        <input type="date" min={todayStr()} value={date} onChange={(e) => { setDate(e.target.value); setTime(""); }} className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm" />
+
+        <p className="mt-4 text-sm font-medium">Heure</p>
+        {!date && <p className="mt-1 text-sm text-muted-foreground">Choisissez d’abord une date.</p>}
+        {date && loadingSlots && <p className="mt-1 text-sm text-muted-foreground">Chargement des créneaux…</p>}
+        {date && !loadingSlots && baseSlots.length === 0 && <p className="mt-1 text-sm text-destructive">La pharmacie est fermée ce jour-là.</p>}
+        {date && !loadingSlots && baseSlots.length > 0 && slots.length === 0 && <p className="mt-1 text-sm text-destructive">Aucun créneau disponible ce jour-là.</p>}
+        {!loadingSlots && slots.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {slots.map((s) => <button key={s} type="button" onClick={() => setTime(s)} className={`rounded-md border px-3 py-1.5 text-sm tabular-nums ${time === s ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"}`}>{s}</button>)}
+          </div>
+        )}
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">Prénom<input value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2" /></label>
+          <label className="text-sm">Nom<input value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2" /></label>
+          <label className="text-sm">Téléphone<input value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2" /></label>
+          <label className="text-sm">E-mail (facultatif)<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2" /></label>
+        </div>
+
+        <label className="mt-4 block text-sm">Remarque (facultatif)<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="mt-1 w-full rounded-md border bg-background px-3 py-2" /></label>
+
+        <button disabled={saving} className="mt-6 flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground disabled:opacity-60"><Check className="size-4" /> {saving ? "Enregistrement…" : "Créer le rendez-vous (confirmé)"}</button>
+      </form>
     </div>
   );
 }

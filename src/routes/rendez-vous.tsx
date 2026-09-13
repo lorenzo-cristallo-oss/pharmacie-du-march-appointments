@@ -110,7 +110,7 @@ function BookingPage() {
     }
 
     return allSlots.filter((slot) => {
-      const [hours, minutes] = slot
+      const [hours = 0, minutes = 0] = slot
         .split(":")
         .map(Number);
 
