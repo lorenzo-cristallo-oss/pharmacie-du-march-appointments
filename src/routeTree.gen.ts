@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as InfosRouteImport } from './routes/infos'
 import { Route as PrestationsRouteImport } from './routes/prestations'
 import { Route as RendezVousRouteImport } from './routes/rendez-vous'
@@ -18,6 +19,11 @@ import { Route as VaccinsRouteImport } from './routes/vaccins'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InfosRoute = InfosRouteImport.update({
@@ -43,6 +49,7 @@ const VaccinsRoute = VaccinsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/infos': typeof InfosRoute
   '/prestations': typeof PrestationsRoute
   '/rendez-vous': typeof RendezVousRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/infos': typeof InfosRoute
   '/prestations': typeof PrestationsRoute
   '/rendez-vous': typeof RendezVousRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/infos': typeof InfosRoute
   '/prestations': typeof PrestationsRoute
   '/rendez-vous': typeof RendezVousRoute
@@ -65,14 +74,23 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/infos' | '/prestations' | '/rendez-vous' | '/vaccins'
+  fullPaths:
+    '/' | '/admin' | '/infos' | '/prestations' | '/rendez-vous' | '/vaccins'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/infos' | '/prestations' | '/rendez-vous' | '/vaccins'
-  id: '__root__' | '/' | '/infos' | '/prestations' | '/rendez-vous' | '/vaccins'
+  to: '/' | '/admin' | '/infos' | '/prestations' | '/rendez-vous' | '/vaccins'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/infos'
+    | '/prestations'
+    | '/rendez-vous'
+    | '/vaccins'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   InfosRoute: typeof InfosRoute
   PrestationsRoute: typeof PrestationsRoute
   RendezVousRoute: typeof RendezVousRoute
@@ -86,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/infos': {
@@ -121,6 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   InfosRoute: InfosRoute,
   PrestationsRoute: PrestationsRoute,
   RendezVousRoute: RendezVousRoute,
