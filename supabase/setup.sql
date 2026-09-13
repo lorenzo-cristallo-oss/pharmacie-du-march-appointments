@@ -52,3 +52,18 @@ grant execute on function public.admin_list_blocks(text) to anon;
 grant execute on function public.admin_set_reservation_status(text,uuid,text) to anon;
 grant execute on function public.admin_add_block(text,text,date,time,time,text) to anon;
 grant execute on function public.admin_delete_block(text,uuid) to anon;
+
+-- Création manuelle d'un rendez-vous par l'admin (téléphone / sur place) : statut 'accepted'.
+-- Une seule salle : un rendez-vous actif bloque le créneau pour vaccin ET prestation.
+create or replace function public.admin_create_reservation(p_password text,p_type text,p_service text,p_date date,p_time time,p_first_name text,p_last_name text,p_phone text,p_email text default null,p_notes text default null) returns uuid language plpgsql security definer set search_path=public as $$
+declare v uuid; begin
+ if not admin_check_password(p_password) then raise exception 'Mot de passe incorrect'; end if;
+ if p_type not in ('vaccin','prestation') then raise exception 'Type invalide'; end if;
+ if coalesce(trim(p_service),'')='' then raise exception 'Prestation manquante'; end if;
+ if coalesce(trim(p_first_name),'')='' or coalesce(trim(p_last_name),'')='' or coalesce(trim(p_phone),'')='' then raise exception 'Coordonnées incomplètes'; end if;
+ if exists(select 1 from reservations where appointment_date=p_date and start_time=p_time and status in ('pending','accepted')) then raise exception 'Ce créneau est déjà réservé'; end if;
+ if exists(select 1 from blocked_slots where blocked_date=p_date and type in (p_type,'all') and (start_time is null or (p_time>=start_time and p_time<end_time))) then raise exception 'Ce créneau est indisponible'; end if;
+ insert into reservations(type,service,appointment_date,start_time,first_name,last_name,phone,email,notes,status)
+ values(p_type,trim(p_service),p_date,p_time,trim(p_first_name),trim(p_last_name),trim(p_phone),nullif(trim(p_email),''),nullif(trim(p_notes),''),'accepted') returning id into v; return v;
+ exception when unique_violation then raise exception 'Ce créneau vient d’être réservé'; end; $$;
+grant execute on function public.admin_create_reservation(text,text,text,date,time,text,text,text,text,text) to anon;
