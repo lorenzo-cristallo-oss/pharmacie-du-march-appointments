@@ -42,7 +42,10 @@ function AdminPage() {
     setChecking(true);
     try {
       const ok = await adminLogin(password);
-      if (!ok) return toast.error("Mot de passe incorrect.");
+      if (!ok) {
+        toast.error("Mot de passe incorrect.");
+        return;
+      }
       sessionStorage.setItem(SESSION_KEY, password);
       setLoggedIn(true);
     } catch {
