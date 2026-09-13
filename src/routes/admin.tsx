@@ -129,7 +129,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
           <div><p className="text-xs uppercase tracking-[.16em] text-muted-foreground">Pharmacie Du Marché</p><h1 className="font-serif text-2xl font-semibold">Administration</h1></div>
-          <div className="flex gap-2"><button onClick={() => void load()} className="rounded-md border p-2" title="Actualiser"><RefreshCw className="size-4" /></button><button onClick={onLogout} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"><LogOut className="size-4" /> Déconnexion</button></div>
+          <div className="flex flex-wrap items-center gap-2"><button onClick={() => setCreating(true)} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm"><Plus className="size-4" /> Ajouter un rendez-vous</button><button onClick={() => void load()} className="rounded-md border p-2" title="Actualiser"><RefreshCw className="size-4" /></button><button onClick={onLogout} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"><LogOut className="size-4" /> Déconnexion</button></div>
         </div>
       </header>
 
